@@ -3775,14 +3775,16 @@ function buildCodeSection(nodeId) {
   }).join('');
 
   return `
-    <div class="src-toggle" onclick="toggleSrcPanel('${nodeId}',this)">
-      <div class="src-toggle-icon">&lt;/&gt;</div>
-      <span class="src-toggle-label">Source Code</span>
-      <span class="src-toggle-meta">${cz.lang} · ${cz.lines} lines</span>
-      <span class="src-chevron" id="srcChevron-${nodeId}">▾</span>
-    </div>
-    <div class="src-body" id="srcBody-${nodeId}">
-      <pre class="src-pre">${zonesHtml}</pre>
+    <div id="src-section-${nodeId}">
+      <div class="src-toggle" onclick="toggleSrcPanel('${nodeId}',this)">
+        <div class="src-toggle-icon">&lt;/&gt;</div>
+        <span class="src-toggle-label">Source Code</span>
+        <span class="src-toggle-meta">${cz.lang} · ${cz.lines} lines</span>
+        <span class="src-chevron" id="srcChevron-${nodeId}">▾</span>
+      </div>
+      <div class="src-body" id="srcBody-${nodeId}">
+        <pre class="src-pre">${zonesHtml}</pre>
+      </div>
     </div>`;
 }
 
@@ -4709,9 +4711,31 @@ const TOUR = [
   {
     sel: '.inspector',
     title: 'Click anything to understand it.',
-    msg: 'Tap any node to open its Inspector. Get <strong>AI-generated descriptions</strong>, connections, recent agent activity, and warnings. Expand Source Code to read any file with <strong>line-by-line plain English explanations</strong> for every block of code.',
+    msg: 'Tap any node to open its Inspector. Get <strong>AI-generated descriptions</strong>, connections, recent agent activity, and architecture warnings. The inspector is already showing <strong>auth.ts</strong> — the JWT middleware Claude Code is actively working on.',
     side: 'left',
     pad: 8,
+  },
+  {
+    sel: '#src-section-file-auth',
+    title: 'Read any code in plain English.',
+    msg: 'Every file node has a built-in code viewer at the bottom of the Inspector. <strong>Hover any line</strong> to see a plain English explanation of exactly what that code does — imports, database queries, auth checks, async operations — with full architectural context, not just syntax.',
+    side: 'left',
+    pad: 10,
+    beforeShow() {
+      // Expand the source code panel and scroll it into view
+      const body    = document.getElementById('srcBody-file-auth');
+      const chevron = document.getElementById('srcChevron-file-auth');
+      const insp    = document.querySelector('.inspector');
+      if (body && !body.classList.contains('open')) {
+        body.classList.add('open');
+        if (chevron) chevron.classList.add('open');
+      }
+      // Scroll the inspector so the code section is visible
+      const section = document.getElementById('src-section-file-auth');
+      if (section && insp) {
+        setTimeout(() => section.scrollIntoView({ behavior:'smooth', block:'nearest' }), 80);
+      }
+    },
   },
   {
     sel: '#sbInsights',
@@ -4798,8 +4822,12 @@ function _showTourStep(idx) {
     btn.classList.remove('last');
   }
 
+  // Run any step-specific setup (e.g. expand panels, scroll into view)
+  if (step.beforeShow) step.beforeShow();
+
   if (!el) { _centerCard(); _clearSpot(); return; }
 
+  // Re-query after beforeShow (DOM may have changed/scrolled)
   const rect = el.getBoundingClientRect();
 
   step.pad >= 0 ? _setSpot(rect, step.pad) : _clearSpot();
@@ -4893,11 +4921,13 @@ function _drawArrow(rect, side, pad) {
   ap.setAttribute('opacity', 0.9);
 }
 
-// Start tour on every page load, after canvas is ready
+// Preload auth.ts in inspector + start tour on every page load
 window.addEventListener('load', () =>
-  requestAnimationFrame(() => requestAnimationFrame(() =>
-    setTimeout(startTour, 900)
-  ))
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    // Pre-select auth.ts so the inspector is populated from the first frame
+    setTimeout(() => selectNode('file-auth'), 220);
+    setTimeout(startTour, 1000);
+  }))
 );
 
 </script>
