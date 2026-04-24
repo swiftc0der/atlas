@@ -1415,6 +1415,92 @@ body.resizing-v{cursor:ns-resize!important;user-select:none!important}
   display:flex;align-items:center;justify-content:center;font-size:14px;
 }
 
+/* ═══════════════════════════════════════════════════
+   ONBOARDING TOUR
+   ═══════════════════════════════════════════════════ */
+#tourSvg{
+  position:fixed;inset:0;width:100%;height:100%;
+  z-index:99990;transition:opacity .22s ease;
+}
+.tour-card{
+  position:fixed;z-index:99995;width:360px;
+  background:rgba(8,10,17,.98);
+  border:1px solid rgba(255,255,255,.11);
+  border-radius:18px;padding:26px 26px 22px;
+  backdrop-filter:blur(36px) saturate(200%);
+  -webkit-backdrop-filter:blur(36px) saturate(200%);
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,.5),
+    0 8px 28px rgba(0,0,0,.55),
+    0 40px 96px rgba(0,0,0,.65),
+    inset 0 1px 0 rgba(255,255,255,.08);
+  display:none;
+  transition:opacity .22s ease;
+}
+.tour-card.on{
+  display:block;
+  animation:tourCardIn .28s cubic-bezier(.25,.1,.25,1);
+}
+@keyframes tourCardIn{
+  from{opacity:0;transform:translateY(10px) scale(.97)}
+  to  {opacity:1;transform:translateY(0)    scale(1)}
+}
+.tour-dots{display:flex;gap:5px;margin-bottom:18px;align-items:center}
+.tour-dot{
+  width:7px;height:7px;border-radius:50%;flex-shrink:0;
+  background:rgba(255,255,255,.14);transition:all .28s cubic-bezier(.25,.1,.25,1);
+}
+.tour-dot.done{background:rgba(255,255,255,.42)}
+.tour-dot.active{
+  width:22px;height:7px;border-radius:4px;
+  background:var(--primary);
+  box-shadow:0 0 10px rgba(79,168,255,.5);
+}
+.tour-step-lbl{
+  font-size:10.5px;font-weight:700;color:var(--primary);
+  text-transform:uppercase;letter-spacing:.09em;margin-bottom:9px;
+}
+.tour-title{
+  font-size:19px;font-weight:800;color:var(--text-1);
+  letter-spacing:-.035em;line-height:1.22;margin-bottom:13px;
+}
+.tour-msg{
+  font-size:13px;color:var(--text-2);line-height:1.68;letter-spacing:-.005em;
+}
+.tour-msg strong{color:var(--text-1);font-weight:600}
+.tour-actions{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-top:24px;
+}
+.tour-skip{
+  background:transparent;border:none;color:var(--text-3);
+  font-size:12px;cursor:pointer;font-family:inherit;
+  padding:5px 0;transition:color .14s;letter-spacing:.01em;
+}
+.tour-skip:hover{color:var(--text-2)}
+.tour-next{
+  display:flex;align-items:center;gap:7px;padding:10px 22px;
+  border-radius:10px;border:none;color:#fff;
+  font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;
+  letter-spacing:-.01em;transition:all .18s;
+  background:linear-gradient(135deg,var(--primary),var(--primary-deep));
+  box-shadow:0 3px 16px rgba(79,168,255,.38),inset 0 1px 0 rgba(255,255,255,.15);
+}
+.tour-next:hover{
+  background:linear-gradient(135deg,#62B4FF,#1A7FE8);
+  box-shadow:0 6px 28px rgba(79,168,255,.55),inset 0 1px 0 rgba(255,255,255,.15);
+  transform:translateY(-1px);
+}
+.tour-next:active{transform:translateY(0)}
+.tour-next.last{
+  background:linear-gradient(135deg,#9B6DFF,#5B21B6);
+  box-shadow:0 3px 16px rgba(139,92,246,.45),inset 0 1px 0 rgba(255,255,255,.15);
+}
+.tour-next.last:hover{
+  background:linear-gradient(135deg,#A97BFF,#6D28D9);
+  box-shadow:0 6px 28px rgba(139,92,246,.6),inset 0 1px 0 rgba(255,255,255,.15);
+}
+
 /* Toast notification */
 .atlas-toast{
   position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(20px);
@@ -1556,7 +1642,7 @@ body.resizing-v{cursor:ns-resize!important;user-select:none!important}
     <div class="sb-divider"></div>
 
     <!-- Active insights — surfaced at sidebar level -->
-    <div class="sb-section">
+    <div class="sb-section" id="sbInsights">
       <div class="sb-title" style="display:flex;align-items:center;justify-content:space-between">
         <span>Insights</span>
         <span style="font-size:10px;color:var(--warn);background:rgba(255,184,32,.12);padding:1px 7px;border-radius:8px;border:1px solid rgba(255,184,32,.25);font-weight:700">3 warnings</span>
@@ -4546,6 +4632,7 @@ function switchProject(id) {
 
 // When architect generates a new project, register it in the switcher
 function registerGeneratedProject(name, nodeCount) {
+
   const id = 'gen-' + Date.now();
   _generatedProjects.push({
     id, name, meta: `${nodeCount} nodes · just generated`, color:'#A855F7', demo:null,
@@ -4555,6 +4642,263 @@ function registerGeneratedProject(name, nodeCount) {
   document.getElementById('projSwDot').style.background = '#A855F7';
   document.getElementById('projSwDot').style.color = '#A855F7';
 }
+
+</script>
+
+<!-- ═══════════════════════════════════════════════════════
+     ONBOARDING TOUR
+     ═══════════════════════════════════════════════════════ -->
+
+<!-- Backdrop SVG with spotlight cutout + arrow -->
+<svg id="tourSvg" style="display:none">
+  <defs>
+    <mask id="tourMask">
+      <rect width="9999" height="9999" fill="white"/>
+      <rect id="tourHole" rx="10" fill="black" x="0" y="0" width="0" height="0"/>
+    </mask>
+    <marker id="tourAH" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="rgba(79,168,255,.9)"/>
+    </marker>
+  </defs>
+  <rect id="tourBD" width="9999" height="9999" fill="rgba(0,0,0,0.76)" mask="url(#tourMask)"/>
+  <rect id="tourGlow" rx="10" fill="none" stroke="rgba(79,168,255,.65)" stroke-width="2"
+        x="0" y="0" width="0" height="0"/>
+  <path id="tourArrow" fill="none" stroke="rgba(79,168,255,.85)" stroke-width="1.5"
+        stroke-dasharray="5 3" marker-end="url(#tourAH)" opacity="0"/>
+</svg>
+
+<!-- Tour card -->
+<div class="tour-card" id="tourCard">
+  <div class="tour-dots" id="tourDots"></div>
+  <div class="tour-step-lbl" id="tourLbl">Step 1 of 7</div>
+  <div class="tour-title"  id="tourTitle"></div>
+  <div class="tour-msg"    id="tourMsg"></div>
+  <div class="tour-actions">
+    <button class="tour-skip" onclick="endTour()">Skip tour</button>
+    <button class="tour-next" id="tourNext" onclick="tourAdvance()">Next →</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// ONBOARDING TOUR
+// ═══════════════════════════════════════════════════════════
+
+const TOUR = [
+  {
+    sel: '.canvas-wrap',
+    title: 'Your entire project, mapped.',
+    msg: 'This is the Atlas canvas — a live, interactive graph of your software project. Every service, database, API, and AI agent is a node. <strong>Click</strong> any node to inspect it. <strong>Drag</strong> to rearrange. <strong>Scroll</strong> to zoom.',
+    side: 'center',
+    pad: -1,
+  },
+  {
+    sel: '.view-pills',
+    title: 'Three views. One system.',
+    msg: '<strong>Overview</strong> shows agents, services, databases, and external APIs at a glance. <strong>Stack</strong> adds your infrastructure and secrets. <strong>Code</strong> reveals every file and how it connects. Switch freely — each view tells a different architectural story.',
+    side: 'below',
+    pad: 10,
+  },
+  {
+    sel: '.sidebar',
+    title: 'AI agents are first-class nodes.',
+    msg: 'Claude Code, Cursor, and your custom AI pipelines live on the canvas <strong>alongside</strong> your services and databases — not buried in a log. Atlas tracks what every agent built, modified, or read, so you always know what changed and why.',
+    side: 'right',
+    pad: 8,
+  },
+  {
+    sel: '.inspector',
+    title: 'Click anything to understand it.',
+    msg: 'Tap any node to open its Inspector. Get <strong>AI-generated descriptions</strong>, connections, recent agent activity, and warnings. Expand Source Code to read any file with <strong>line-by-line plain English explanations</strong> for every block of code.',
+    side: 'left',
+    pad: 8,
+  },
+  {
+    sel: '#sbInsights',
+    title: 'Spot problems before they escalate.',
+    msg: 'Atlas scans your architecture and surfaces real warnings automatically — missing rate limits, unindexed columns, uncapped API spend. Hit <strong>Fix →</strong> to send the issue directly to Claude Code, which addresses it in the next session.',
+    side: 'right',
+    pad: 8,
+  },
+  {
+    sel: '.arch-btn',
+    title: 'Generate any architecture in seconds.',
+    msg: 'Describe a project in plain English — <em>"a Stripe-powered SaaS for gym owners with AI workout planning"</em> — and Atlas Architect maps the full system live: services, databases, APIs, agents, and infrastructure, all <strong>animated onto the canvas</strong> as it builds.',
+    side: 'below',
+    pad: 10,
+  },
+  {
+    sel: '.pg-btn',
+    title: 'Keep building. Right here.',
+    msg: 'Chat with Claude Code directly inside Atlas. Ask it to add services, scaffold files, or wire up APIs. Describe what you want and <strong>watch it appear on the canvas in real time</strong> — without ever switching windows.',
+    side: 'below',
+    pad: 10,
+    last: true,
+  },
+];
+
+let _ti = 0;
+
+function startTour() {
+  _ti = 0;
+  const svg = document.getElementById('tourSvg');
+  svg.style.display = '';
+  svg.style.opacity = 1;
+  _showTourStep(0);
+}
+
+function endTour() {
+  const svg = document.getElementById('tourSvg');
+  const card = document.getElementById('tourCard');
+  svg.style.opacity = 0;
+  card.style.opacity = 0;
+  setTimeout(() => {
+    svg.style.display = 'none';
+    svg.style.opacity = '';
+    card.style.opacity = '';
+    card.classList.remove('on');
+  }, 240);
+}
+
+function tourAdvance() {
+  if (_ti >= TOUR.length - 1) { endTour(); return; }
+  const svg = document.getElementById('tourSvg');
+  const card = document.getElementById('tourCard');
+  svg.style.opacity = 0;
+  card.style.opacity = 0;
+  setTimeout(() => {
+    _ti++;
+    svg.style.opacity = 1;
+    card.style.opacity = '';
+    _showTourStep(_ti);
+  }, 210);
+}
+
+function _showTourStep(idx) {
+  const step = TOUR[idx];
+  const el = document.querySelector(step.sel);
+
+  // Dots
+  document.getElementById('tourDots').innerHTML = TOUR.map((_,i) =>
+    `<div class="tour-dot ${i<idx?'done':i===idx?'active':''}"></div>`
+  ).join('');
+
+  // Text
+  document.getElementById('tourLbl').textContent = `Step ${idx+1} of ${TOUR.length}`;
+  document.getElementById('tourTitle').textContent = step.title;
+  document.getElementById('tourMsg').innerHTML = step.msg;
+
+  // Button
+  const btn = document.getElementById('tourNext');
+  if (step.last) {
+    btn.textContent = "Let's hop in!";
+    btn.classList.add('last');
+  } else {
+    btn.textContent = 'Next →';
+    btn.classList.remove('last');
+  }
+
+  if (!el) { _centerCard(); _clearSpot(); return; }
+
+  const rect = el.getBoundingClientRect();
+
+  step.pad >= 0 ? _setSpot(rect, step.pad) : _clearSpot();
+  _placeCard(rect, step.side);
+
+  const card = document.getElementById('tourCard');
+  card.classList.remove('on');
+  void card.offsetWidth;
+  card.classList.add('on');
+
+  requestAnimationFrame(() => _drawArrow(rect, step.side, step.pad));
+}
+
+function _clearSpot() {
+  ['tourHole','tourGlow'].forEach(id => {
+    const el = document.getElementById(id);
+    el.setAttribute('width', 0); el.setAttribute('height', 0);
+  });
+  document.getElementById('tourArrow').setAttribute('opacity', 0);
+}
+
+function _setSpot(rect, pad) {
+  const x = rect.left - pad, y = rect.top - pad;
+  const w = rect.width + pad*2, h = rect.height + pad*2;
+  ['tourHole','tourGlow'].forEach(id => {
+    const el = document.getElementById(id);
+    el.setAttribute('x', x); el.setAttribute('y', y);
+    el.setAttribute('width', w); el.setAttribute('height', h);
+  });
+}
+
+const CW = 364, CM = 18;
+
+function _placeCard(rect, side) {
+  const card = document.getElementById('tourCard');
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const ch = card.offsetHeight || 240;
+  let left, top;
+
+  if (side === 'center') {
+    left = (vw - CW) / 2;
+    top  = (vh - ch) / 2;
+  } else if (side === 'below') {
+    left = Math.max(CM, Math.min(rect.left + rect.width/2 - CW/2, vw - CW - CM));
+    top  = Math.min(rect.bottom + 18, vh - ch - CM);
+  } else if (side === 'above') {
+    left = Math.max(CM, Math.min(rect.left + rect.width/2 - CW/2, vw - CW - CM));
+    top  = Math.max(CM, rect.top - ch - 18);
+  } else if (side === 'right') {
+    left = Math.min(rect.right + 20, vw - CW - CM);
+    top  = Math.max(CM, Math.min(rect.top + rect.height/2 - ch/2, vh - ch - CM));
+  } else if (side === 'left') {
+    left = Math.max(CM, rect.left - CW - 20);
+    top  = Math.max(CM, Math.min(rect.top + rect.height/2 - ch/2, vh - ch - CM));
+  }
+
+  card.style.left = left + 'px';
+  card.style.top  = top  + 'px';
+  card.style.right = card.style.bottom = 'auto';
+}
+
+function _centerCard() {
+  const card = document.getElementById('tourCard');
+  const ch = card.offsetHeight || 240;
+  card.style.left = ((window.innerWidth  - CW) / 2) + 'px';
+  card.style.top  = ((window.innerHeight - ch) / 2) + 'px';
+  card.style.right = card.style.bottom = 'auto';
+}
+
+function _drawArrow(rect, side, pad) {
+  const ap = document.getElementById('tourArrow');
+  if (side === 'center' || pad < 0) { ap.setAttribute('opacity', 0); return; }
+
+  const card = document.getElementById('tourCard');
+  const cr = card.getBoundingClientRect();
+  const sx = rect.left - pad, sy = rect.top - pad;
+  const sw = rect.width + pad*2, sh = rect.height + pad*2;
+
+  let fx, fy, tx, ty;
+  if (side === 'below')  { fx=cr.left+cr.width/2; fy=cr.top;          tx=sx+sw/2; ty=sy+sh; }
+  if (side === 'above')  { fx=cr.left+cr.width/2; fy=cr.bottom;       tx=sx+sw/2; ty=sy;    }
+  if (side === 'right')  { fx=cr.left;             fy=cr.top+cr.height/2; tx=sx+sw; ty=sy+sh/2; }
+  if (side === 'left')   { fx=cr.right;            fy=cr.top+cr.height/2; tx=sx;    ty=sy+sh/2; }
+
+  const dx=tx-fx, dy=ty-fy, dist=Math.sqrt(dx*dx+dy*dy)||1;
+  const ex=tx-(dx/dist)*10, ey=ty-(dy/dist)*10; // shorten for arrowhead
+  const cpx=(fx+tx)/2 + (-dy/dist)*28;
+  const cpy=(fy+ty)/2 + (dx/dist)*28;
+
+  ap.setAttribute('d', `M ${fx} ${fy} Q ${cpx} ${cpy} ${ex} ${ey}`);
+  ap.setAttribute('opacity', 0.9);
+}
+
+// Start tour on every page load, after canvas is ready
+window.addEventListener('load', () =>
+  requestAnimationFrame(() => requestAnimationFrame(() =>
+    setTimeout(startTour, 900)
+  ))
+);
 
 </script>
 </body>
