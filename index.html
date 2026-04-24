@@ -1501,6 +1501,38 @@ body.resizing-v{cursor:ns-resize!important;user-select:none!important}
   box-shadow:0 6px 28px rgba(139,92,246,.6),inset 0 1px 0 rgba(255,255,255,.15);
 }
 
+/* ═══════════════════════════════════════════════════
+   TIER LANE LABELS — software stack hierarchy
+   ═══════════════════════════════════════════════════ */
+.tier-lbl{
+  position:absolute;left:12px;right:12px;
+  display:flex;align-items:center;gap:9px;
+  pointer-events:none;z-index:3;
+  transition:opacity .3s;
+}
+.tier-lbl-t{
+  font-size:8px;font-weight:900;letter-spacing:.16em;
+  text-transform:uppercase;white-space:nowrap;
+  opacity:.38;flex-shrink:0;
+}
+.tier-lbl-line{
+  flex:1;height:1px;opacity:.22;
+}
+/* System boundary — vertical line separating your code from external services */
+.sys-boundary{
+  position:absolute;top:8%;bottom:10%;width:1px;
+  pointer-events:none;z-index:3;
+}
+.sys-ext-lbl{
+  position:absolute;top:-16px;left:6px;
+  font-size:7.5px;font-weight:900;letter-spacing:.14em;
+  text-transform:uppercase;color:rgba(255,255,255,.22);
+  white-space:nowrap;
+}
+/* Hide lanes in arch mode */
+body.arch-active .tier-lbl,
+body.arch-active .sys-boundary{ display:none }
+
 /* Toast notification */
 .atlas-toast{
   position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(20px);
@@ -2480,139 +2512,147 @@ function toggleAllLayers(el){
 function getPresetPositions(mode, canvasW, canvasH) {
   const REF_W = 900, REF_H = 600;
 
-  // ── ORBITAL (15 nodes) ──────────────────────────────────────────────────
+  // ── OVERVIEW (15 nodes) ──────────────────────────────────────────────────
   //
-  //        [Claude Code]         [Cursor]          ← agents, top — observe everything
+  // Mental model: software stack, not network topology.
+  // Request flow reads LEFT → RIGHT, TOP → BOTTOM.
   //
-  //   [Next.js]                                    ← frontend, left spine
-  //   [WS Svc]    [Express API]                    ← backend, center spine
-  //               [Worker Svc]
-  //                              [Postgres]         ← databases, center-right cluster
-  //                              [Redis]
-  //                              [S3]
-  //                                        [Auth0]  ← external APIs, right arc
-  //                                        [Stripe]
-  //                                        [SendGrid]
-  //                                        [OpenAI]
-  //                                        [Vercel]
+  //   ┌─ AI AGENTS ─────────────────────────────────────────────────────┐
+  //   │  [Content AI]  [Claude Code]  [Cursor]  [Schema Guard]          │
+  //   ├─ SERVICES ──────────────────────────────────┬─ EXTERNAL ────────┤
+  //   │  [Next.js] ──→ [Express API]                │  [Auth0]          │
+  //   │  [WebSocket]   [Worker]                     │  [Stripe]         │
+  //   ├─ DATA ──────────────────────────────────────┤  [SendGrid]       │
+  //   │  [Postgres]  [Redis]  [S3]                  │  [OpenAI]         │
+  //   └─────────────────────────────────────────────┘  [Vercel]         │
+  //                                                  └───────────────────┘
   //
   const orbital = {
-    'agent-contentai':  { x: 130, y:  72 },
-    'agent-claude':     { x: 310, y:  72 },
-    'agent-cursor':     { x: 510, y:  72 },
-    'agent-schemaguard':{ x: 690, y:  72 },
+    // AI agents span the full top — they can touch any layer
+    'agent-contentai':  { x: 105, y:  58 },
+    'agent-claude':     { x: 275, y:  58 },
+    'agent-cursor':     { x: 455, y:  58 },
+    'agent-schemaguard':{ x: 625, y:  58 },
 
-    'svc-nextjs':    { x: 230, y: 210 },
-    'svc-ws':        { x: 230, y: 360 },
-    'svc-api':       { x: 400, y: 295 },
-    'svc-worker':    { x: 400, y: 440 },
+    // Services: entry point left → backend center → workers below
+    'svc-nextjs':    { x: 140, y: 200 },
+    'svc-ws':        { x: 140, y: 350 },
+    'svc-api':       { x: 320, y: 280 },
+    'svc-worker':    { x: 320, y: 420 },
 
-    'db-postgres':   { x: 590, y: 220 },
-    'db-redis':      { x: 590, y: 345 },
-    'db-s3':         { x: 590, y: 465 },
+    // Data layer: clearly below services
+    'db-postgres':   { x: 165, y: 478 },
+    'db-redis':      { x: 320, y: 478 },
+    'db-s3':         { x: 468, y: 478 },
 
-    'ext-auth0':     { x: 790, y: 155 },
-    'ext-stripe':    { x: 790, y: 265 },
-    'ext-sendgrid':  { x: 790, y: 365 },
-    'ext-openai':    { x: 790, y: 460 },
-    'ext-vercel':    { x: 790, y: 548 },
+    // External services: tight right column — outside your system
+    'ext-auth0':     { x: 770, y: 165 },
+    'ext-stripe':    { x: 770, y: 255 },
+    'ext-sendgrid':  { x: 770, y: 345 },
+    'ext-openai':    { x: 770, y: 432 },
+    'ext-vercel':    { x: 770, y: 515 },
   };
 
-  // ── SERVICES (20 nodes) ─────────────────────────────────────────────────
+  // ── STACK (20 nodes) ─────────────────────────────────────────────────────
   //
-  // Adds infrastructure + secret. Infrastructure anchors to the bottom
-  // ("foundation" metaphor). Secret tucks near the services it unlocks.
-  // Everything else shifts up ~15px to give the foundation row air.
-  //
-  //  [Claude Code]    [Cursor]
-  //  [Next.js]
-  //  [WS Svc]   [Express]    [Postgres][Redis][S3]   [Auth0][Stripe]
-  //             [Worker]                              [SendGrid][OpenAI]
-  //                                                  [Vercel]
-  //  ─────────── foundation ───────────────────────────────────────────────
-  //  [docker-compose]  [ci.yml]           [.env.production]
+  //   ┌─ AI AGENTS ─────────────────────────────────────────────────────┐
+  //   │  [Content AI]  [Claude Code]  [Cursor]  [Schema Guard]          │
+  //   ├─ SERVICES ──────────────────────────────────┬─ EXTERNAL ────────┤
+  //   │  [Next.js] ──→ [Express API]                │  [Auth0]          │
+  //   │  [WS Server]   [Worker]                     │  [Stripe]         │
+  //   ├─ DATA LAYER ────────────────────────────────┤  [SendGrid]       │
+  //   │  [Postgres]  [Redis]  [S3]                  │  [OpenAI]         │
+  //   ├─ INFRASTRUCTURE ────────────────────────────┤  [Vercel]         │
+  //   │  [docker-compose]  [ci.yml]  [.env]         └───────────────────┤
+  //   └─────────────────────────────────────────────────────────────────┘
   //
   const services = {
-    'agent-contentai':  { x: 110, y:  62 },
-    'agent-claude':     { x: 300, y:  62 },
-    'agent-cursor':     { x: 480, y:  62 },
-    'agent-schemaguard':{ x: 670, y:  62 },
+    // AI agents — span full width, touch every layer
+    'agent-contentai':  { x: 105, y:  55 },
+    'agent-claude':     { x: 275, y:  55 },
+    'agent-cursor':     { x: 455, y:  55 },
+    'agent-schemaguard':{ x: 625, y:  55 },
 
-    'svc-nextjs':    { x: 210, y: 180 },
-    'svc-ws':        { x: 210, y: 325 },
-    'svc-api':       { x: 375, y: 260 },
-    'svc-worker':    { x: 375, y: 400 },
+    // Services: LEFT = user entry (Next.js), CENTER = backend (API/Worker)
+    // Reading direction shows the request path: browser → Next.js → API → DB
+    'svc-nextjs':    { x: 140, y: 188 },
+    'svc-ws':        { x: 140, y: 328 },
+    'svc-api':       { x: 325, y: 260 },
+    'svc-worker':    { x: 325, y: 400 },
 
-    'db-postgres':   { x: 560, y: 195 },
-    'db-redis':      { x: 560, y: 310 },
-    'db-s3':         { x: 560, y: 420 },
+    // Data layer: horizontally aligned BELOW services
+    'db-postgres':   { x: 165, y: 468 },
+    'db-redis':      { x: 325, y: 468 },
+    'db-s3':         { x: 475, y: 468 },
 
-    'ext-auth0':     { x: 760, y: 140 },
-    'ext-stripe':    { x: 760, y: 240 },
-    'ext-sendgrid':  { x: 760, y: 335 },
-    'ext-openai':    { x: 760, y: 425 },
-    'ext-vercel':    { x: 760, y: 515 },
+    // External services: tight right column only — visually "outside the wall"
+    'ext-auth0':     { x: 762, y: 158 },
+    'ext-stripe':    { x: 762, y: 248 },
+    'ext-sendgrid':  { x: 762, y: 338 },
+    'ext-openai':    { x: 762, y: 425 },
+    'ext-vercel':    { x: 762, y: 508 },
 
-    // Foundation row
-    'infra-docker':  { x: 210, y: 535 },
-    'infra-ci':      { x: 400, y: 535 },
-    'cfg-env':       { x: 600, y: 535 },
+    // Infrastructure: foundation row
+    'infra-docker':  { x: 140, y: 548 },
+    'infra-ci':      { x: 320, y: 548 },
+    'cfg-env':       { x: 500, y: 548 },
   };
 
-  // ── FILES (24 nodes) ────────────────────────────────────────────────────
+  // ── CODE (26 nodes) ──────────────────────────────────────────────────────
   //
-  // Files attach near their owning service, creating tight sub-clusters.
-  //   auth.ts / stripe.ts / user.service.ts → orbit Express API
-  //   Dashboard.tsx / BillingModal.tsx       → hang below Next.js
-  //   emailDigest.ts                         → hang below Worker
-  //   schema.ts (Prisma)                     → anchored beside PostgreSQL
+  // Files cluster around their owning service (satellite pattern).
+  // Same left→right flow: frontend cluster left, API cluster center,
+  // data cluster right, external column far right.
   //
-  //   [Claude Code]──────────[Cursor]
-  //           [Next.js]
-  //   [WS]  [Dashboard][BillingModal]
-  //           [auth.ts]
-  //           [stripe.ts] [Express API]  [Postgres] [schema.ts]
-  //           [user.svc]                [Redis]
-  //                       [Worker Svc]  [S3]
-  //                       [emailDigest]
-  //   ───────────────── foundation ──────────────────
-  //   [docker-compose]  [ci.yml]    [.env.prod]
+  //   [Agents top row]
+  //   [Next.js]                         [Postgres] [schema.ts]
+  //   [Dashboard] [Billing]    [API]    [Redis]
+  //   [WS]        [auth.ts]             [S3]
+  //               [stripe.ts]                        [Auth0]
+  //               [user.svc]                         [Stripe]
+  //               [Worker]                           [SendGrid]
+  //               [emailDigest]                      [OpenAI]
+  //   [docker] [ci.yml] [.env]                       [Vercel]
   //
   const files = {
-    'agent-contentai':  { x: 100, y:  50 },
-    'agent-claude':     { x: 290, y:  50 },
-    'agent-cursor':     { x: 460, y:  50 },
-    'agent-schemaguard':{ x: 650, y:  50 },
+    'agent-contentai':  { x:  88, y:  48 },
+    'agent-claude':     { x: 265, y:  48 },
+    'agent-cursor':     { x: 445, y:  48 },
+    'agent-schemaguard':{ x: 625, y:  48 },
 
-    'svc-nextjs':      { x: 195, y: 150 },
-    'comp-dashboard':  { x: 100, y: 260 },
-    'comp-billing':    { x: 215, y: 260 },
+    // Frontend cluster (left)
+    'svc-nextjs':      { x: 148, y: 148 },
+    'comp-dashboard':  { x:  72, y: 255 },
+    'comp-billing':    { x: 190, y: 255 },
+    'svc-ws':          { x:  72, y: 372 },
 
-    'svc-ws':          { x: 100, y: 375 },
+    // API cluster (center) — files orbit the service that owns them
+    'svc-api':         { x: 348, y: 248 },
+    'file-auth':       { x: 218, y: 355 },
+    'file-payments':   { x: 335, y: 368 },
+    'file-userservice':{ x: 452, y: 355 },
 
-    'svc-api':         { x: 380, y: 255 },
-    'file-auth':       { x: 240, y: 370 },
-    'file-payments':   { x: 355, y: 385 },
-    'file-userservice':{ x: 465, y: 370 },
+    // Worker cluster
+    'svc-worker':      { x: 340, y: 455 },
+    'file-emailjob':   { x: 225, y: 502 },
 
-    'svc-worker':      { x: 370, y: 465 },
-    'file-emailjob':   { x: 260, y: 510 },
+    // Data layer (right of services)
+    'db-postgres':     { x: 570, y: 188 },
+    'db-redis':        { x: 570, y: 308 },
+    'db-s3':           { x: 570, y: 420 },
+    'file-schema':     { x: 690, y: 188 },
 
-    'db-postgres':     { x: 590, y: 185 },
-    'db-redis':        { x: 590, y: 310 },
-    'db-s3':           { x: 590, y: 425 },
+    // External column (far right)
+    'ext-auth0':       { x: 795, y: 138 },
+    'ext-stripe':      { x: 795, y: 228 },
+    'ext-sendgrid':    { x: 795, y: 325 },
+    'ext-openai':      { x: 795, y: 418 },
+    'ext-vercel':      { x: 795, y: 508 },
 
-    'file-schema':     { x: 720, y: 185 },
-
-    'ext-auth0':       { x: 810, y: 128 },
-    'ext-stripe':      { x: 810, y: 228 },
-    'ext-sendgrid':    { x: 810, y: 333 },
-    'ext-openai':      { x: 810, y: 428 },
-    'ext-vercel':      { x: 810, y: 520 },
-
-    'infra-docker':    { x: 175, y: 558 },
-    'infra-ci':        { x: 385, y: 558 },
-    'cfg-env':         { x: 600, y: 558 },
+    // Foundation
+    'infra-docker':    { x: 148, y: 550 },
+    'infra-ci':        { x: 338, y: 550 },
+    'cfg-env':         { x: 525, y: 550 },
   };
 
   const layouts = { overview: orbital, stack: services, code: files };
@@ -2656,7 +2696,10 @@ function runLayout(mode) {
   }).run();
 }
 
+let _viewMode = 'stack';
+
 function setView(mode,el){
+  _viewMode = mode;
   document.querySelectorAll('.vp-btn').forEach(b=>b.classList.remove('on'));
   el.classList.add('on');
   runLayout(mode);
@@ -4683,6 +4726,75 @@ function registerGeneratedProject(name, nodeCount) {
 
 <script>
 // ═══════════════════════════════════════════════════════════
+// TIER LANE LABELS
+// ═══════════════════════════════════════════════════════════
+
+const TIER_CFG = [
+  { label:'AI AGENTS',      anchor:'agent-claude',   color:'#A78BFA' },
+  { label:'SERVICES',       anchor:'svc-nextjs',     color:'#60A5FA' },
+  { label:'DATA LAYER',     anchor:'db-postgres',    color:'#2DD4BF' },
+  { label:'INFRASTRUCTURE', anchor:'infra-docker',   color:'#94A3B8', stackOnly:true },
+];
+
+function updateTierLanes() {
+  const wrap = document.querySelector('.canvas-wrap');
+  if (!wrap) return;
+  wrap.querySelectorAll('.tier-lbl,.sys-boundary').forEach(el => el.remove());
+
+  TIER_CFG.forEach(tier => {
+    if (tier.stackOnly && _viewMode === 'overview') return;
+    const node = cy.getElementById(tier.anchor);
+    if (!node.length || node.style('display') === 'none') return;
+
+    const rp = node.renderedPosition();
+    const rh = node.renderedHeight();
+    const top = Math.max(4, rp.y - rh/2 - 22);
+
+    const div = document.createElement('div');
+    div.className = 'tier-lbl';
+    div.style.top = top + 'px';
+    div.innerHTML =
+      `<span class="tier-lbl-t" style="color:${tier.color}">${tier.label}</span>` +
+      `<div class="tier-lbl-line" style="background:linear-gradient(90deg,${tier.color} 0%,transparent 100%)"></div>`;
+    wrap.appendChild(div);
+  });
+
+  // System boundary — vertical line between internal nodes and external APIs
+  const extNode = cy.getElementById('ext-auth0');
+  if (!extNode.length || extNode.style('display') === 'none') return;
+
+  let rightmostInternal = 0;
+  cy.nodes().forEach(n => {
+    if (n.data('type') === 'external_api' || n.style('display') === 'none') return;
+    rightmostInternal = Math.max(rightmostInternal, n.renderedPosition().x + n.renderedWidth() / 2);
+  });
+
+  const extLeft = extNode.renderedPosition().x - extNode.renderedWidth() / 2;
+  if (extLeft <= rightmostInternal || extLeft - rightmostInternal < 16) return;
+
+  const bx = rightmostInternal + (extLeft - rightmostInternal) / 2;
+  const line = document.createElement('div');
+  line.className = 'sys-boundary';
+  line.style.cssText = `left:${bx}px;background:linear-gradient(to bottom,transparent,rgba(255,255,255,.07) 12%,rgba(255,255,255,.07) 88%,transparent)`;
+  const lbl = document.createElement('div');
+  lbl.className = 'sys-ext-lbl';
+  lbl.textContent = 'EXTERNAL';
+  line.appendChild(lbl);
+  wrap.appendChild(line);
+}
+
+// Update lanes on any viewport change
+let _laneTimer;
+cy.on('layoutstop zoom pan', () => {
+  clearTimeout(_laneTimer);
+  _laneTimer = setTimeout(updateTierLanes, 90);
+});
+window.addEventListener('resize', () => {
+  clearTimeout(_laneTimer);
+  _laneTimer = setTimeout(updateTierLanes, 160);
+});
+
+// ═══════════════════════════════════════════════════════════
 // ONBOARDING TOUR
 // ═══════════════════════════════════════════════════════════
 
@@ -4927,6 +5039,8 @@ window.addEventListener('load', () =>
     // Pre-select auth.ts so the inspector is populated from the first frame
     setTimeout(() => selectNode('file-auth'), 220);
     setTimeout(startTour, 1000);
+    // Initial tier lanes (after layout animation settles)
+    setTimeout(updateTierLanes, 750);
   }))
 );
 
