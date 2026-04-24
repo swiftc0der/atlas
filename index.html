@@ -1712,9 +1712,17 @@ body.resizing-v{cursor:ns-resize!important;user-select:none!important}
   text-transform:uppercase;color:rgba(255,255,255,.22);
   white-space:nowrap;
 }
+/* EXTERNAL horizontal tier label — top of external APIs column */
+.ext-tier-lbl{
+  position:absolute;right:12px;
+  display:flex;align-items:center;gap:9px;
+  pointer-events:none;z-index:3;
+  transition:opacity .3s;
+}
 /* Hide lanes in arch mode */
 body.arch-active .tier-lbl,
-body.arch-active .sys-boundary{ display:none }
+body.arch-active .sys-boundary,
+body.arch-active .ext-tier-lbl{ display:none }
 
 /* Toast notification */
 .atlas-toast{
@@ -2255,7 +2263,7 @@ function buildStyles(theme){
     {selector:'node',style:{
       'transition-property':'border-width,border-color,background-color,shadow-opacity',
       'transition-duration':'0.18s','overlay-padding':8,
-      'text-wrap':'ellipsis','text-max-width':90,
+      'text-wrap':'ellipsis','text-max-width':100,
     }},
 
     // ── file ──
@@ -2404,6 +2412,7 @@ function buildStyles(theme){
       'shadow-blur':36,'shadow-color':'#8B5CF6','shadow-opacity':dark?.70:.38,'shadow-offset-x':0,'shadow-offset-y':6,
       label:'data(label)',color:lc,'font-size':'12px','font-family':'-apple-system,SF Pro Display,Inter,sans-serif',
       'font-weight':600,'text-valign':'bottom','text-halign':'center','text-margin-y':9,
+      'text-max-width':110,
     }},
 
     // ── selection ──
@@ -2416,40 +2425,44 @@ function buildStyles(theme){
 
     // ── dim / highlight ──
     {selector:'node.dim',style:{opacity:.18}},
-    {selector:'edge.dim',style:{opacity:.06}},
+    {selector:'edge.dim',style:{opacity:.04}},
     {selector:'edge.hi', style:{opacity:1,width:2.5,'z-index':100}},
 
-    // ── edges — cleaner, more directional ──
+    // ── edges — supporting elements, nodes are the heroes ──
     {selector:'edge',style:{
       width:1.5,'line-color':dark?'#323640':'#C8D0DC',
       'target-arrow-color':dark?'#323640':'#C8D0DC',
-      'target-arrow-shape':'triangle','arrow-scale':.85,
-      'curve-style':'bezier',opacity:.6,
+      'target-arrow-shape':'triangle','arrow-scale':.75,
+      'curve-style':'bezier',opacity:.40,
+      'edge-text-rotation':'autorotate',
     }},
     {selector:'edge[kind="import"]',style:{
-      'line-color':dark?'rgba(43,149,255,.65)':'rgba(43,149,255,.55)',
-      'target-arrow-color':dark?'rgba(43,149,255,.65)':'rgba(43,149,255,.55)',
-      width:1.5,opacity:.75,
+      'line-color':dark?'rgba(43,149,255,.55)':'rgba(43,149,255,.45)',
+      'target-arrow-color':dark?'rgba(43,149,255,.55)':'rgba(43,149,255,.45)',
+      width:1.5,opacity:.40,
     }},
     {selector:'edge[kind="call"]',style:{
-      'line-color':dark?'rgba(91,180,255,.7)':'rgba(91,180,255,.6)',
-      'target-arrow-color':dark?'rgba(91,180,255,.7)':'rgba(91,180,255,.6)',
-      width:2,opacity:.85,'arrow-scale':1,
+      'line-color':dark?'rgba(91,180,255,.65)':'rgba(91,180,255,.55)',
+      'target-arrow-color':dark?'rgba(91,180,255,.65)':'rgba(91,180,255,.55)',
+      width:2,opacity:.60,'arrow-scale':.75,
+      'edge-text-rotation':'autorotate',
     }},
     {selector:'edge[kind="data"]',style:{
-      'line-color':dark?'rgba(20,184,166,.6)':'rgba(20,184,166,.5)',
-      'target-arrow-color':dark?'rgba(20,184,166,.6)':'rgba(20,184,166,.5)',
-      width:1.5,'line-style':'dashed','line-dash-pattern':[5,3],opacity:.72,
+      'line-color':dark?'rgba(20,184,166,.45)':'rgba(20,184,166,.38)',
+      'target-arrow-color':dark?'rgba(20,184,166,.45)':'rgba(20,184,166,.38)',
+      width:1.5,'line-style':'dashed','line-dash-pattern':[5,3],opacity:.35,
+      'edge-text-rotation':'autorotate',
     }},
     {selector:'edge[kind="deploys"]',style:{
-      'line-color':dark?'rgba(148,163,184,.5)':'rgba(100,116,139,.45)',
-      'target-arrow-color':dark?'rgba(148,163,184,.5)':'rgba(100,116,139,.45)',
-      width:1.5,opacity:.6,
+      'line-color':dark?'rgba(148,163,184,.45)':'rgba(100,116,139,.38)',
+      'target-arrow-color':dark?'rgba(148,163,184,.45)':'rgba(100,116,139,.38)',
+      width:1.5,opacity:.38,
     }},
     {selector:'edge[kind="authored"]',style:{
-      'line-color':dark?'rgba(139,92,246,.6)':'rgba(109,40,217,.5)',
-      'target-arrow-color':dark?'rgba(139,92,246,.6)':'rgba(109,40,217,.5)',
-      width:1.5,'line-style':'dashed','line-dash-pattern':[4,4],opacity:.6,
+      'line-color':dark?'rgba(139,92,246,.40)':'rgba(109,40,217,.35)',
+      'target-arrow-color':dark?'rgba(139,92,246,.40)':'rgba(109,40,217,.35)',
+      width:1.5,'line-style':'dashed','line-dash-pattern':[4,4],opacity:.22,
+      'edge-text-rotation':'autorotate',
     }},
   ];
 }
@@ -2798,44 +2811,74 @@ function getPresetPositions(mode, canvasW, canvasH) {
   //   [docker] [ci.yml] [.env]                       [Vercel]
   //
   const files = {
-    'agent-contentai':  { x:  88, y:  48 },
-    'agent-claude':     { x: 265, y:  48 },
-    'agent-cursor':     { x: 445, y:  48 },
-    'agent-schemaguard':{ x: 625, y:  48 },
+    // Agents — top row, ordered left→right to sit above their primary targets.
+    // agent-cursor(90)      → comp-dashboard(120), comp-billing(165)  ← leftmost
+    // agent-claude(310)     → file-auth(370), file-payments(430), file-userservice(480)
+    // agent-schemaguard(480)→ file-schema(650), db-postgres(555)  — left of both targets
+    // agent-contentai(520)  → db-postgres(555), ext-openai(760)   — left of both targets
+    'agent-cursor':     { x:  90, y:  48 },
+    'agent-claude':     { x: 310, y:  48 },
+    'agent-schemaguard':{ x: 480, y:  48 },
+    'agent-contentai':  { x: 520, y:  48 },
 
-    // Frontend cluster (left)
-    'svc-nextjs':      { x: 148, y: 148 },
-    'comp-dashboard':  { x:  72, y: 255 },
-    'comp-billing':    { x: 190, y: 255 },
-    'svc-ws':          { x:  72, y: 372 },
+    // Frontend cluster — far left, x=80-165
+    // svc-nextjs at x=80 is the leftmost service; components sit below and right of it.
+    // svc-ws shares the same x column, stacked below Next.js.
+    'svc-nextjs':      { x:  80, y: 160 },
+    'comp-dashboard':  { x: 120, y: 270 },
+    'comp-billing':    { x: 165, y: 270 },
+    'svc-ws':          { x:  80, y: 390 },
 
-    // API cluster (center) — files orbit the service that owns them
-    'svc-api':         { x: 348, y: 248 },
-    'file-auth':       { x: 218, y: 355 },
-    'file-payments':   { x: 335, y: 368 },
-    'file-userservice':{ x: 452, y: 355 },
+    // API cluster — center, x=330-480
+    // Express API is the hub at x=330. Its three files sit below in a row,
+    // all to the RIGHT of the API so edges from svc-api to files flow right.
+    // Left-to-right file order mirrors their external targets:
+    //   file-auth(370)     → ext-auth0(760, y=160) — topmost external
+    //   file-payments(430) → ext-stripe(760, y=270)
+    //   file-userservice(480) → db-postgres only (no external target)
+    'svc-api':         { x: 330, y: 195 },
+    'file-auth':       { x: 370, y: 315 },
+    'file-payments':   { x: 430, y: 315 },
+    'file-userservice':{ x: 480, y: 430 },
 
-    // Worker cluster
-    'svc-worker':      { x: 340, y: 455 },
-    'file-emailjob':   { x: 225, y: 502 },
+    // Worker cluster — center-bottom, x=255
+    // svc-worker sits below-left of the API cluster.
+    // file-emailjob is directly below the worker (vertical edge, no crossing).
+    // Both connect rightward to ext-sendgrid and ext-openai.
+    'svc-worker':      { x: 255, y: 430 },
+    'file-emailjob':   { x: 255, y: 510 },
 
-    // Data layer (right of services)
-    'db-postgres':     { x: 570, y: 188 },
-    'db-redis':        { x: 570, y: 308 },
-    'db-s3':           { x: 570, y: 420 },
-    'file-schema':     { x: 690, y: 188 },
+    // Data layer — right-center, x=555-650
+    // All database targets sit to the RIGHT of their service sources.
+    // Postgres(top) has the most edges; Redis(middle); S3(bottom).
+    // schema.ts sits right of postgres — it defines postgres's structure.
+    'db-postgres':     { x: 555, y: 195 },
+    'db-redis':        { x: 555, y: 315 },
+    'db-s3':           { x: 555, y: 430 },
+    'file-schema':     { x: 650, y: 195 },
 
-    // External column (far right)
-    'ext-auth0':       { x: 795, y: 138 },
-    'ext-stripe':      { x: 795, y: 228 },
-    'ext-sendgrid':    { x: 795, y: 325 },
-    'ext-openai':      { x: 795, y: 418 },
-    'ext-vercel':      { x: 795, y: 508 },
+    // External APIs — far right tight column, x=760
+    // Ordered top→bottom to match callers' y positions, minimising edge slope:
+    //   auth0(160)    ← svc-nextjs(y=160), file-auth(y=315)
+    //   stripe(270)   ← file-payments(y=315), cfg-env(y=490)
+    //   sendgrid(375) ← svc-worker(y=430), file-emailjob(y=510)
+    //   openai(465)   ← svc-worker(y=430), file-emailjob(y=510), agent-contentai(y=48)
+    //   vercel(555)   ← infra-ci(y=555)
+    'ext-auth0':       { x: 760, y: 160 },
+    'ext-stripe':      { x: 760, y: 270 },
+    'ext-sendgrid':    { x: 760, y: 375 },
+    'ext-openai':      { x: 760, y: 465 },
+    'ext-vercel':      { x: 760, y: 555 },
 
-    // Foundation
-    'infra-docker':    { x: 148, y: 550 },
-    'infra-ci':        { x: 338, y: 550 },
-    'cfg-env':         { x: 525, y: 550 },
+    // Infrastructure — bottom row and near-bottom
+    // infra-docker(x=55) is leftmost of all — left of svc-ws(x=80) so its
+    //   "deploys" edges fan rightward to api(330), worker(255), ws(80), dbs(555).
+    // infra-ci(x=480) sits right-of-center; its only target is ext-vercel(760) rightward.
+    // cfg-env(x=460) sits left of db-postgres(555) and left of ext-stripe(760),
+    //   so both its targets are rightward.
+    'infra-docker':    { x:  55, y: 555 },
+    'infra-ci':        { x: 480, y: 555 },
+    'cfg-env':         { x: 460, y: 490 },
   };
 
   const layouts = { overview: orbital, stack: services, code: files };
@@ -2860,9 +2903,29 @@ function runLayout(mode) {
   if (mode === 'overview') {
     cy.nodes('[type!="service"][type!="database"][type!="external_api"][type!="agent"]')
       .style('display', 'none');
+    // Hide file→file and file→database edges — keep overview clean
+    cy.edges().filter(e => {
+      const src = cy.getElementById(e.data('source'));
+      const tgt = cy.getElementById(e.data('target'));
+      const srcType = src.data('type');
+      const tgtType = tgt.data('type');
+      return (srcType === 'file' && tgtType === 'file') ||
+             (srcType === 'file' && tgtType === 'database');
+    }).style('display', 'none');
   } else if (mode === 'stack') {
     cy.nodes('[type!="service"][type!="database"][type!="external_api"][type!="infrastructure"][type!="agent"][type!="secret"]')
       .style('display', 'none');
+  } else if (mode === 'code') {
+    // Hide agent→file edges (chaos: agents touch many files; agent→service already conveys ownership)
+    // Hide file→external_api edges (redundant: service→external already represents this)
+    cy.edges().filter(e => {
+      const src = cy.getElementById(e.data('source'));
+      const tgt = cy.getElementById(e.data('target'));
+      const srcType = src.data('type');
+      const tgtType = tgt.data('type');
+      return (srcType === 'agent'   && tgtType === 'file') ||
+             (srcType === 'file'    && tgtType === 'external_api');
+    }).style('display', 'none');
   }
   // 'code': all nodes visible
 
@@ -4922,7 +4985,9 @@ const TIER_CFG = [
 function updateTierLanes() {
   const wrap = document.querySelector('.canvas-wrap');
   if (!wrap) return;
-  wrap.querySelectorAll('.tier-lbl,.sys-boundary').forEach(el => el.remove());
+  wrap.querySelectorAll('.tier-lbl,.sys-boundary,.ext-tier-lbl').forEach(el => el.remove());
+
+  const canvasH = cy.height();
 
   TIER_CFG.forEach(tier => {
     if (tier.stackOnly && _viewMode === 'overview') return;
@@ -4931,7 +4996,11 @@ function updateTierLanes() {
 
     const rp = node.renderedPosition();
     const rh = node.renderedHeight();
-    const top = Math.max(4, rp.y - rh/2 - 22);
+
+    // Only render when anchor node is within the visible canvas area
+    if (rp.y < 0 || rp.y > canvasH) return;
+
+    const top = Math.max(4, rp.y - rh / 2 - 20);
 
     const div = document.createElement('div');
     div.className = 'tier-lbl';
@@ -4959,11 +5028,33 @@ function updateTierLanes() {
   const line = document.createElement('div');
   line.className = 'sys-boundary';
   line.style.cssText = `left:${bx}px;background:linear-gradient(to bottom,transparent,rgba(255,255,255,.07) 12%,rgba(255,255,255,.07) 88%,transparent)`;
-  const lbl = document.createElement('div');
-  lbl.className = 'sys-ext-lbl';
-  lbl.textContent = 'EXTERNAL';
-  line.appendChild(lbl);
   wrap.appendChild(line);
+
+  // EXTERNAL — horizontal label at top of the external APIs column
+  const extRp = extNode.renderedPosition();
+  if (extRp.y > 0 && extRp.y < canvasH) {
+    // Find the leftmost external node to anchor left edge of label
+    let extColLeft = extRp.x;
+    cy.nodes('[type="external_api"]').forEach(n => {
+      if (n.style('display') === 'none') return;
+      extColLeft = Math.min(extColLeft, n.renderedPosition().x - n.renderedWidth() / 2);
+    });
+    // Find topmost external node Y
+    let extTopY = extRp.y;
+    cy.nodes('[type="external_api"]').forEach(n => {
+      if (n.style('display') === 'none') return;
+      const ny = n.renderedPosition().y - n.renderedHeight() / 2;
+      if (ny < extTopY) extTopY = ny;
+    });
+
+    const extLbl = document.createElement('div');
+    extLbl.className = 'ext-tier-lbl';
+    extLbl.style.cssText = `left:${Math.max(bx + 8, extColLeft)}px;top:${Math.max(4, extTopY - 20)}px;`;
+    extLbl.innerHTML =
+      `<span class="tier-lbl-t" style="color:#94A3B8">EXTERNAL</span>` +
+      `<div class="tier-lbl-line" style="background:linear-gradient(90deg,#94A3B8 0%,transparent 100%);flex:1;height:1px;opacity:.22"></div>`;
+    wrap.appendChild(extLbl);
+  }
 }
 
 // Update lanes on any viewport change
